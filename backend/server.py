@@ -3,6 +3,7 @@ from flask_cors import CORS
 from sodapy import Socrata
 from dotenv import load_dotenv
 import os
+import sys
 import traceback
 from openai import OpenAI
 from data_fetcher import get_all_buildings
@@ -23,11 +24,25 @@ def get_buildings_cache():
     """Get or fetch buildings data (cached)."""
     global _buildings_cache
     if _buildings_cache is None:
+        print("CACHE MISS: Loading building data from API...", flush=True)
+        sys.stdout.flush()
         _buildings_cache = get_all_buildings()
+        print(f"CACHE LOADED: {len(_buildings_cache)} buildings cached", flush=True)
+        sys.stdout.flush()
     return _buildings_cache
 
 app = Flask(__name__)
 CORS(app)
+
+# Initialize cache on startup
+print("=" * 60, flush=True)
+print("SERVER STARTUP: Initializing building data cache...", flush=True)
+print("=" * 60, flush=True)
+sys.stdout.flush()
+_buildings_cache = get_all_buildings()
+print(f"SERVER READY: {len(_buildings_cache)} buildings loaded and cached", flush=True)
+print("=" * 60, flush=True)
+sys.stdout.flush()
 
 @app.route('/')
 def home():
