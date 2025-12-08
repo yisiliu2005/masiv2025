@@ -135,14 +135,45 @@ def buildings_intersect(footprint_polygon, assessment_multipolygon):
         bool: True if geometries intersect, False otherwise
     """
     try:
+        # Extract coordinates safely - sometimes geometry structure differs
+        if isinstance(footprint_polygon, dict):
+            fp_coords = footprint_polygon.get("coordinates")
+            fp_type = footprint_polygon.get("type")
+            if not fp_coords or not fp_type:
+                print(f"DEBUG: Invalid footprint geometry - type: {fp_type}, has coordinates: {bool(fp_coords)}", flush=True)
+                return False
+        else:
+            print(f"DEBUG: Footprint is not a dict: {type(footprint_polygon)}", flush=True)
+            return False
+        
+        if isinstance(assessment_multipolygon, dict):
+            ap_coords = assessment_multipolygon.get("coordinates")
+            ap_type = assessment_multipolygon.get("type")
+            if not ap_coords or not ap_type:
+                print(f"DEBUG: Invalid assessment geometry - type: {ap_type}, has coordinates: {bool(ap_coords)}", flush=True)
+                return False
+        else:
+            print(f"DEBUG: Assessment is not a dict: {type(assessment_multipolygon)}", flush=True)
+            return False
+        
+        # Convert GeoJSON to Shapely geometry
         fp_shape = shape(footprint_polygon)
         ap_shape = shape(assessment_multipolygon)
+        
+        # Check if valid
+        if not fp_shape.is_valid or not ap_shape.is_valid:
+            print(f"DEBUG: Invalid Shapely geometries - fp valid: {fp_shape.is_valid}, ap valid: {ap_shape.is_valid}", flush=True)
+            return False
+        
         result = fp_shape.intersects(ap_shape)
         return result
+    except TypeError as e:
+        print(f"ERROR in buildings_intersect (TypeError): {e}", flush=True)
+        print(f"  Footprint: type={type(footprint_polygon)}, keys={list(footprint_polygon.keys()) if isinstance(footprint_polygon, dict) else 'N/A'}", flush=True)
+        print(f"  Assessment: type={type(assessment_multipolygon)}, keys={list(assessment_multipolygon.keys()) if isinstance(assessment_multipolygon, dict) else 'N/A'}", flush=True)
+        return False
     except Exception as e:
-        print(f"ERROR in buildings_intersect: {type(e).__name__}: {e}", flush=True)
-        print(f"  Footprint type: {type(footprint_polygon)}", flush=True)
-        print(f"  Assessment type: {type(assessment_multipolygon)}", flush=True)
+        print(f"ERROR in buildings_intersect ({type(e).__name__}): {e}", flush=True)
         return False
 
 
