@@ -2,13 +2,17 @@
  * API Service for communicating with the Flask backend
  */
 
+// Allow overriding backend URL in prod; default to CRA proxy in dev
+const API_BASE = process.env.REACT_APP_API_BASE || '';
+const buildUrl = (path) => `${API_BASE}${path}`;
+
 /**
  * Fetch all buildings from the backend
  * @returns {Promise<Array>} Array of building objects
  */
 export const fetchBuildings = async () => {
   try {
-    const response = await fetch('/api/buildings');
+    const response = await fetch(buildUrl('/api/buildings'));
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -37,7 +41,7 @@ export const queryBuildings = async (query, apiKey) => {
       body.api_key = apiKey;
     }
 
-    const response = await fetch('/api/query', {
+    const response = await fetch(buildUrl('/api/query'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
