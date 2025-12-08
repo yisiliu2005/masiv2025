@@ -31,6 +31,7 @@ def fetch_building_footprints():
     # Use SODA API with within_box filter for the bounding box
     # Note: within_box uses (lat, lon) ordering
     try:
+        print(f"Fetching from {url}...", flush=True)
         response = requests.get(
             url,
             params={
@@ -38,12 +39,20 @@ def fetch_building_footprints():
                 "$where": f"""
                     within_box(polygon, {MIN_LAT}, {MIN_LON}, {MAX_LAT}, {MAX_LON})
                 """
-            }
+            },
+            timeout=120  # Increase timeout for slow networks
         )
         response.raise_for_status()
-        return response.json()
+        data = response.json()
+        print(f"✓ Footprints API returned {len(data) if data else 0} records", flush=True)
+        return data if data else []
+    except requests.exceptions.Timeout:
+        print(f"ERROR: Footprints API request TIMED OUT after 120 seconds", flush=True)
+        return []
     except Exception as e:
-        print(f"Error fetching building footprints: {e}")
+        print(f"ERROR fetching building footprints: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
         return []
 
 
@@ -62,20 +71,24 @@ def fetch_property_assessments():
         
         where_clause = f"within_box(multipolygon, {MIN_LAT}, {MIN_LON}, {MAX_LAT}, {MAX_LON})"
         
+        print(f"Fetching from {url}...", flush=True)
         response = requests.get(
             url,
             params={
                 "$limit": 50000,
                 "$where": where_clause
             },
-            timeout=30
+            timeout=120  # Increase timeout for slow networks
         )
         response.raise_for_status()
         results = response.json()
-        print(f"DEBUG: Fetched {len(results) if results else 0} property assessments from API")
-        return results
+        print(f"✓ Assessments API returned {len(results) if results else 0} records", flush=True)
+        return results if results else []
+    except requests.exceptions.Timeout:
+        print(f"ERROR: Assessments API request TIMED OUT after 120 seconds", flush=True)
+        return []
     except Exception as e:
-        print(f"Error fetching property assessments: {e}")
+        print(f"ERROR fetching property assessments: {e}", flush=True)
         import traceback
         traceback.print_exc()
         return []
@@ -186,27 +199,27 @@ def get_all_buildings():
     Returns:
         list: Combined building data for the target area
     """
-    print("=" * 60)
-    print("STARTING: Fetching all building data")
-    print("=" * 60)
+    print("=" * 60, flush=True)
+    print("STARTING: Fetching all building data", flush=True)
+    print("=" * 60, flush=True)
     
-    print("Fetching building footprints...")
+    print("Fetching building footprints...", flush=True)
     footprints = fetch_building_footprints()
-    print(f"✓ Found {len(footprints)} building footprints")
+    print(f"✓ Found {len(footprints)} building footprints", flush=True)
     
-    print("Fetching property assessments...")
+    print("Fetching property assessments...", flush=True)
     assessments = fetch_property_assessments()
-    print(f"✓ Found {len(assessments)} property assessments")
+    print(f"✓ Found {len(assessments)} property assessments", flush=True)
     
-    print("Combining data...")
+    print("Combining data...", flush=True)
     buildings = combine_building_data(footprints, assessments)
-    print(f"✓ Combined {len(buildings)} buildings with all attributes")
+    print(f"✓ Combined {len(buildings)} buildings with all attributes", flush=True)
     
     # Count how many have matching assessment data
     with_address = sum(1 for b in buildings if b["address"])
     with_value = sum(1 for b in buildings if b["assessed_value"] > 0)
-    print(f"  - Buildings with address: {with_address}")
-    print(f"  - Buildings with assessed value: {with_value}")
+    print(f"  - Buildings with address: {with_address}", flush=True)
+    print(f"  - Buildings with assessed value: {with_value}", flush=True)
     
-    print("=" * 60)
+    print("=" * 60, flush=True)
     return buildings
