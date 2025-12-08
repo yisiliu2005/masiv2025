@@ -56,21 +56,28 @@ def fetch_property_assessments():
         list: Property assessment data with zoning and values
     """
     try:
-        # Use app token from environment to avoid rate limiting
-        app_token = os.getenv("CALGARY_APP_TOKEN")
-        client = Socrata("data.calgary.ca", app_token)
+        # Use requests directly for more reliable API access
+        # This bypasses the Socrata client which may have network issues on Render
+        url = "https://data.calgary.ca/resource/4bsw-nn7w.json"
         
-        # Query property data within the bounding box
-        results = client.get(
-            "4bsw-nn7w",
-            where=f"""
-                within_box(multipolygon, {MIN_LAT}, {MIN_LON}, {MAX_LAT}, {MAX_LON})
-            """,
-            limit=50000
+        where_clause = f"within_box(multipolygon, {MIN_LAT}, {MIN_LON}, {MAX_LAT}, {MAX_LON})"
+        
+        response = requests.get(
+            url,
+            params={
+                "$limit": 50000,
+                "$where": where_clause
+            },
+            timeout=30
         )
+        response.raise_for_status()
+        results = response.json()
+        print(f"DEBUG: Fetched {len(results) if results else 0} property assessments from API")
         return results
     except Exception as e:
         print(f"Error fetching property assessments: {e}")
+        import traceback
+        traceback.print_exc()
         return []
 
 
@@ -179,16 +186,27 @@ def get_all_buildings():
     Returns:
         list: Combined building data for the target area
     """
+    print("=" * 60)
+    print("STARTING: Fetching all building data")
+    print("=" * 60)
+    
     print("Fetching building footprints...")
     footprints = fetch_building_footprints()
-    print(f"Found {len(footprints)} building footprints")
+    print(f"✓ Found {len(footprints)} building footprints")
     
     print("Fetching property assessments...")
     assessments = fetch_property_assessments()
-    print(f"Found {len(assessments)} property assessments")
+    print(f"✓ Found {len(assessments)} property assessments")
     
     print("Combining data...")
     buildings = combine_building_data(footprints, assessments)
-    print(f"Combined {len(buildings)} buildings with all attributes")
+    print(f"✓ Combined {len(buildings)} buildings with all attributes")
     
+    # Count how many have matching assessment data
+    with_address = sum(1 for b in buildings if b["address"])
+    with_value = sum(1 for b in buildings if b["assessed_value"] > 0)
+    print(f"  - Buildings with address: {with_address}")
+    print(f"  - Buildings with assessed value: {with_value}")
+    
+    print("=" * 60)
     return buildings
