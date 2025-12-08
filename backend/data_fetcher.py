@@ -82,6 +82,8 @@ def fetch_property_assessments():
         where_clause = f"within_box(multipolygon, {MIN_LAT}, {MIN_LON}, {MAX_LAT}, {MAX_LON})"
         
         print(f"Fetching from {url}...", flush=True)
+        print(f"  Query: {where_clause}", flush=True)
+        
         response = requests.get(
             url,
             params={
@@ -90,12 +92,28 @@ def fetch_property_assessments():
             },
             timeout=120  # Increase timeout for slow networks
         )
+        
+        print(f"  Response status: {response.status_code}", flush=True)
+        print(f"  Response size: {len(response.text)} bytes", flush=True)
+        
         response.raise_for_status()
         results = response.json()
         print(f"✓ Assessments API returned {len(results) if results else 0} records", flush=True)
+        
+        if results and len(results) > 0:
+            print(f"  Sample record keys: {list(results[0].keys())}", flush=True)
+        
         return results if results else []
     except requests.exceptions.Timeout:
         print(f"ERROR: Assessments API request TIMED OUT after 120 seconds", flush=True)
+        return []
+    except requests.exceptions.HTTPError as e:
+        print(f"ERROR: HTTP {response.status_code} from assessments API", flush=True)
+        print(f"  Response: {response.text[:500]}", flush=True)
+        return []
+    except ValueError as e:
+        print(f"ERROR: Failed to parse JSON from assessments API: {e}", flush=True)
+        print(f"  Response text: {response.text[:500]}", flush=True)
         return []
     except Exception as e:
         print(f"ERROR fetching property assessments: {e}", flush=True)
