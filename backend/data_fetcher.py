@@ -56,7 +56,9 @@ def fetch_property_assessments():
         list: Property assessment data with zoning and values
     """
     try:
-        client = Socrata("data.calgary.ca", None)
+        # Use app token from environment to avoid rate limiting
+        app_token = os.getenv("CALGARY_APP_TOKEN")
+        client = Socrata("data.calgary.ca", app_token)
         
         # Query property data within the bounding box
         results = client.get(
