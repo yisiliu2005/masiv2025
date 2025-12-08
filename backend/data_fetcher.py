@@ -164,6 +164,7 @@ def get_polygon_centroid(polygon_geojson):
 def combine_building_data(footprints, assessments):
     """
     Combine footprint data with property assessment data by matching geometries.
+    Uses geometry intersection for robust matching.
     
     Args:
         footprints (list): Building footprint data
@@ -173,19 +174,34 @@ def combine_building_data(footprints, assessments):
         list: Combined building data with all attributes
     """
     combined = []
+    matched_count = 0
+    failed_count = 0
     
     for footprint in footprints:
         polygon = footprint.get("polygon")
+        struct_id = footprint.get("struct_id")
         if not polygon:
             continue
         
         # Find matching assessment data
         matching_assessment = None
+        match_found = False
+        
         for assessment in assessments:
             multipolygon = assessment.get("multipolygon")
-            if multipolygon and buildings_intersect(polygon, multipolygon):
-                matching_assessment = assessment
-                break
+            if multipolygon:
+                try:
+                    if buildings_intersect(polygon, multipolygon):
+                        matching_assessment = assessment
+                        match_found = True
+                        matched_count += 1
+                        break
+                except Exception as e:
+                    print(f"DEBUG: Intersection check failed for {struct_id}: {e}", flush=True)
+                    continue
+        
+        if not match_found:
+            failed_count += 1
         
         # Calculate building height
         height = None
@@ -217,6 +233,7 @@ def combine_building_data(footprints, assessments):
         
         combined.append(building)
     
+    print(f"DEBUG: Matching results - matched: {matched_count}, failed: {failed_count}", flush=True)
     return combined
 
 
