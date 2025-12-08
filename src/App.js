@@ -1,25 +1,25 @@
-import logo from './logo.svg';
-import './App.css';
+import React, {useState, useEffect} from 'react'
+import * as soda from 'soda-js'
+import * as THREE from 'three'
+
+// Get and store building footprint and height data for rendering:
+var building = new soda.Consumer('https://data.calgary.ca/resource/cchr-krqg.json');
+//building.query()
+
+//get other building data such as property assessment from backend
 
 function App() {
+  const [data, setData] = useState(null);
+  useEffect(() => {
+    fetch('/members')
+      .then(response => response.json())
+      .then(data => setData(data));
+  }, []);
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div>
+      text
     </div>
-  );
+  )
 }
 
-export default App;
+export default App
