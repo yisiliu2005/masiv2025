@@ -96,10 +96,7 @@ The app will open at `http://localhost:3000` with the backend at `http://localho
 ## 📖 Usage
 
 ### 1. **View Buildings**
-The 3D scene loads with all 21 buildings in the downtown Calgary area automatically displayed. Use your mouse to:
-- **Rotate**: Click and drag
-- **Zoom**: Scroll wheel
-- **Pan**: Right-click and drag (or Cmd+click on Mac)
+The 3D scene loads a section of downtown Calgary, 4 blocks. 
 
 ### 2. **Click Buildings**
 Click any building to see details:
@@ -126,7 +123,7 @@ The LLM interprets your intent, filters matching buildings, and highlights them 
 ## 🔧 API Endpoints
 
 ### GET `/api/buildings`
-Returns all 21 buildings in the dataset.
+Returns all buildings in the defined region.
 
 **Response:**
 ```json
@@ -281,7 +278,7 @@ Buildings are matched across two datasets (footprints + property assessments) us
 - Always convert carefully between systems
 
 ### Performance
-- All 21 buildings are cached on backend startup (< 2s load time)
+- All buildings are cached on backend startup (< 2s load time)
 - Frontend renders with a single Three.js scene (60+ FPS)
 - API responses are lightweight (~10KB per request)
 
@@ -299,29 +296,13 @@ Buildings are matched across two datasets (footprints + property assessments) us
 
 ## 📄 License
 
-This project is part of the MASI V2025 Intern Test. Use and modification permitted for educational purposes.
+This project is part of the MASIV 2025 Intern Test. Use and modification permitted for educational purposes.
 
 ---
 
 ## 👤 Author
 
-Created as a demonstration of full-stack development with 3D visualization, real-time data processing, and LLM integration.
-
-**Time Limit**: 24 hours ⏱️
-
----
-
-## ✅ Checklist
-
-- [x] 3D Building Visualization (Three.js)
-- [x] Calgary Building Data Integration
-- [x] Backend API (`/api/buildings`, `/api/query`)
-- [x] Property Data Matching & Combining
-- [x] Frontend Deployment (Vercel)
-- [x] Backend Deployment (Render)
-- [ ] LLM Query Processing (llm_processor.py - ready to implement)
-- [ ] README.md (this file)
-- [ ] UML Diagrams (architecture, sequence)
+Yisi Liu, GitHub Copilot
 
 ---
 
