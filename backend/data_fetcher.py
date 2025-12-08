@@ -122,58 +122,160 @@ def fetch_property_assessments():
         return []
 
 
+def _get_polygon_centroid_simple(polygon_geojson):
+    """
+    Calculate centroid of a polygon by averaging all coordinates.
+    This avoids Shapely parsing issues.
+    
+    Args:
+        polygon_geojson (dict): GeoJSON Polygon object
+    
+    Returns:
+        tuple: (latitude, longitude) of the centroid, or None if invalid
+    """
+    try:
+        if not isinstance(polygon_geojson, dict):
+            return None
+        
+        coords = polygon_geojson.get("coordinates", [])
+        if not coords or len(coords) == 0:
+            return None
+        
+        # For Polygon type, coordinates is [[[lon, lat], [lon, lat], ...], ...]
+        # Use the outer ring (coords[0])
+        ring = coords[0] if coords else []
+        if not ring or len(ring) < 3:
+            return None
+        
+        # Calculate average
+        lons = [c[0] for c in ring if len(c) >= 2]
+        lats = [c[1] for c in ring if len(c) >= 2]
+        
+        if not lons or not lats:
+            return None
+        
+        centroid_lon = sum(lons) / len(lons)
+        centroid_lat = sum(lats) / len(lats)
+        
+        return (centroid_lat, centroid_lon)
+    except Exception as e:
+        print(f"DEBUG: Error calculating simple centroid: {e}", flush=True)
+        return None
+
+
+def _get_multipolygon_centroid_simple(multipolygon_geojson):
+    """
+    Calculate centroid of a multipolygon by averaging all coordinates.
+    This avoids Shapely parsing issues.
+    
+    Args:
+        multipolygon_geojson (dict): GeoJSON MultiPolygon object
+    
+    Returns:
+        tuple: (latitude, longitude) of the centroid, or None if invalid
+    """
+    try:
+        if not isinstance(multipolygon_geojson, dict):
+            return None
+        
+        coords = multipolygon_geojson.get("coordinates", [])
+        if not coords or len(coords) == 0:
+            return None
+        
+        # For MultiPolygon, coordinates is [[[[lon, lat], ...], ...], ...]
+        # Flatten and average all points
+        all_lons = []
+        all_lats = []
+        
+        for polygon in coords:
+            if polygon:  # polygon is [[[lon, lat], ...], ...]
+                for ring in polygon:
+                    if ring:  # ring is [[lon, lat], ...]
+                        for point in ring:
+                            if len(point) >= 2:
+                                all_lons.append(point[0])
+                                all_lats.append(point[1])
+        
+        if not all_lons or not all_lats:
+            return None
+        
+        centroid_lon = sum(all_lons) / len(all_lons)
+        centroid_lat = sum(all_lats) / len(all_lats)
+        
+        return (centroid_lat, centroid_lon)
+    except Exception as e:
+        print(f"DEBUG: Error calculating multipolygon centroid: {e}", flush=True)
+        return None
+
+
+def buildings_match_by_proximity(footprint_polygon, assessment_multipolygon, threshold_meters=50):
+    """
+    Match buildings by proximity of their centroids instead of Shapely intersection.
+    This avoids Shapely geometry parsing issues seen on Render.
+    
+    Args:
+        footprint_polygon (dict): GeoJSON Polygon from footprint dataset
+        assessment_multipolygon (dict): GeoJSON MultiPolygon from assessment dataset
+        threshold_meters (float): Maximum distance in meters for a match (default 50m)
+    
+    Returns:
+        bool: True if centroids are within threshold distance
+    """
+    try:
+        fp_centroid = _get_polygon_centroid_simple(footprint_polygon)
+        ap_centroid = _get_multipolygon_centroid_simple(assessment_multipolygon)
+        
+        if not fp_centroid or not ap_centroid:
+            return False
+        
+        # Calculate distance using Haversine formula
+        from math import radians, sin, cos, sqrt, atan2
+        
+        lat1, lon1 = fp_centroid
+        lat2, lon2 = ap_centroid
+        
+        R = 6371000  # Earth radius in meters
+        
+        dlat = radians(lat2 - lat1)
+        dlon = radians(lon2 - lon1)
+        
+        a = sin(dlat/2)**2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon/2)**2
+        c = 2 * atan2(sqrt(a), sqrt(1-a))
+        distance = R * c
+        
+        return distance <= threshold_meters
+    except Exception as e:
+        print(f"ERROR in buildings_match_by_proximity: {type(e).__name__}: {e}", flush=True)
+        return False
+
+
 def buildings_intersect(footprint_polygon, assessment_multipolygon):
     """
     Check if a building footprint polygon intersects with an assessment multipolygon.
     This is used to match buildings across the two datasets.
+    
+    FALLBACK: Uses proximity-based matching due to Shapely issues on Render.
     
     Args:
         footprint_polygon (dict): GeoJSON Polygon object from footprint dataset
         assessment_multipolygon (dict): GeoJSON MultiPolygon object from property dataset
     
     Returns:
-        bool: True if geometries intersect, False otherwise
+        bool: True if geometries intersect (or are within proximity), False otherwise
     """
     try:
-        # Extract coordinates safely - sometimes geometry structure differs
-        if isinstance(footprint_polygon, dict):
-            fp_coords = footprint_polygon.get("coordinates")
-            fp_type = footprint_polygon.get("type")
-            if not fp_coords or not fp_type:
-                print(f"DEBUG: Invalid footprint geometry - type: {fp_type}, has coordinates: {bool(fp_coords)}", flush=True)
-                return False
-        else:
-            print(f"DEBUG: Footprint is not a dict: {type(footprint_polygon)}", flush=True)
-            return False
-        
-        if isinstance(assessment_multipolygon, dict):
-            ap_coords = assessment_multipolygon.get("coordinates")
-            ap_type = assessment_multipolygon.get("type")
-            if not ap_coords or not ap_type:
-                print(f"DEBUG: Invalid assessment geometry - type: {ap_type}, has coordinates: {bool(ap_coords)}", flush=True)
-                return False
-        else:
-            print(f"DEBUG: Assessment is not a dict: {type(assessment_multipolygon)}", flush=True)
-            return False
-        
-        # Convert GeoJSON to Shapely geometry
-        fp_shape = shape(footprint_polygon)
-        ap_shape = shape(assessment_multipolygon)
-        
-        # Check if valid
-        if not fp_shape.is_valid or not ap_shape.is_valid:
-            print(f"DEBUG: Invalid Shapely geometries - fp valid: {fp_shape.is_valid}, ap valid: {ap_shape.is_valid}", flush=True)
-            return False
-        
-        result = fp_shape.intersects(ap_shape)
-        return result
-    except TypeError as e:
-        print(f"ERROR in buildings_intersect (TypeError): {e}", flush=True)
-        print(f"  Footprint: type={type(footprint_polygon)}, keys={list(footprint_polygon.keys()) if isinstance(footprint_polygon, dict) else 'N/A'}", flush=True)
-        print(f"  Assessment: type={type(assessment_multipolygon)}, keys={list(assessment_multipolygon.keys()) if isinstance(assessment_multipolygon, dict) else 'N/A'}", flush=True)
-        return False
+        # Try Shapely first (works on local)
+        try:
+            fp_shape = shape(footprint_polygon)
+            ap_shape = shape(assessment_multipolygon)
+            result = fp_shape.intersects(ap_shape)
+            return result
+        except (TypeError, AttributeError, ValueError) as shapely_error:
+            # If Shapely fails, fall back to proximity matching
+            print(f"DEBUG: Shapely failed ({type(shapely_error).__name__}), falling back to proximity matching", flush=True)
+            return buildings_match_by_proximity(footprint_polygon, assessment_multipolygon)
     except Exception as e:
-        print(f"ERROR in buildings_intersect ({type(e).__name__}): {e}", flush=True)
+        print(f"ERROR in buildings_intersect: {type(e).__name__}: {e}", flush=True)
         return False
 
 
