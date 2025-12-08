@@ -137,8 +137,12 @@ def buildings_intersect(footprint_polygon, assessment_multipolygon):
     try:
         fp_shape = shape(footprint_polygon)
         ap_shape = shape(assessment_multipolygon)
-        return fp_shape.intersects(ap_shape)
-    except Exception:
+        result = fp_shape.intersects(ap_shape)
+        return result
+    except Exception as e:
+        print(f"ERROR in buildings_intersect: {type(e).__name__}: {e}", flush=True)
+        print(f"  Footprint type: {type(footprint_polygon)}", flush=True)
+        print(f"  Assessment type: {type(assessment_multipolygon)}", flush=True)
         return False
 
 
@@ -176,6 +180,7 @@ def combine_building_data(footprints, assessments):
     combined = []
     matched_count = 0
     failed_count = 0
+    first_error_logged = False
     
     for footprint in footprints:
         polygon = footprint.get("polygon")
@@ -197,7 +202,9 @@ def combine_building_data(footprints, assessments):
                         matched_count += 1
                         break
                 except Exception as e:
-                    print(f"DEBUG: Intersection check failed for {struct_id}: {e}", flush=True)
+                    if not first_error_logged:
+                        print(f"DEBUG: First intersection error for {struct_id}: {e}", flush=True)
+                        first_error_logged = True
                     continue
         
         if not match_found:
