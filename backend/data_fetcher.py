@@ -18,6 +18,16 @@ MIN_LON = -114.07927447774654 # westernmost point
 MAX_LON = -114.07429304853973 # easternmost point
 
 
+def _safe_int(value):
+    """Safely convert a value to int, handling strings and None."""
+    if value is None:
+        return 0
+    try:
+        return int(float(value))
+    except (ValueError, TypeError):
+        return 0
+
+
 def fetch_building_footprints():
     """
     Fetch building footprints and heights from Calgary Open Data.
@@ -182,7 +192,7 @@ def combine_building_data(footprints, assessments):
             "longitude": lat_lon[1],
             "height": height,
             "land_use_designation": matching_assessment.get("land_use_designation", "") if matching_assessment else "",
-            "assessed_value": matching_assessment.get("assessed_value", 0) if matching_assessment else 0,
+            "assessed_value": _safe_int(matching_assessment.get("assessed_value", 0) if matching_assessment else 0),
             "year_of_construction": matching_assessment.get("year_of_construction") if matching_assessment else None,
             "footprint": polygon.get("coordinates", []) if polygon else []
         }
