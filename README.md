@@ -45,54 +45,6 @@ Frontend (React)                     Backend (Flask)                    External
 
 ---
 
-## 🚀 Getting Started
-
-### Prerequisites
-- **Node.js** v16+ (for React frontend)
-- **Python** 3.8+ (for Flask backend)
-- **Hugging Face API Key** (free tier works)
-
-### Installation
-
-#### 1. Clone & Setup
-```bash
-git clone https://github.com/yisiliu2005/masiv2025.git
-cd masiv2025
-```
-
-#### 2. Backend Setup
-```bash
-cd backend
-
-# Create virtual environment
-python3 -m venv venv
-source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Create .env file with Hugging Face token
-echo "HF_TOKEN=your_hf_token_here" > .env
-
-# Start Flask server (runs on http://localhost:5000)
-python3 server.py
-```
-
-#### 3. Frontend Setup
-```bash
-cd ../map
-
-# Install dependencies
-npm install
-
-# Start React dev server (runs on http://localhost:3000, proxies API to localhost:5000)
-npm start
-```
-
-The app will open at `http://localhost:3000` with the backend at `http://localhost:5000`.
-
----
-
 ## 📖 Usage
 
 ### 1. **View Buildings**
@@ -213,17 +165,6 @@ masiv2025/
 
 ---
 
-## 🔑 Environment Variables
-
-Create `backend/.env` file:
-```env
-HF_TOKEN=hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-```
-
-Get your free Hugging Face token at: https://huggingface.co/settings/tokens
-
----
-
 ## 📊 Data Sources
 
 - **Building Footprints & Heights**: [Calgary Open Data - cchr-krqg.json](https://data.calgary.ca/resource/cchr-krqg.json)
@@ -231,39 +172,6 @@ Get your free Hugging Face token at: https://huggingface.co/settings/tokens
   
 - **Property Assessment Data**: [Calgary Open Data - 4bsw-nn7w.json](https://data.calgary.ca/resource/4bsw-nn7w.json)
   - Fields: `multipolygon`, `address`, `assessed_value`, `land_use_designation`, `year_of_construction`
-
----
-
-## 🚢 Deployment
-
-### Frontend (Vercel)
-```bash
-cd map
-npm run build
-vercel deploy
-```
-
-### Backend (Render)
-1. Push code to GitHub
-2. Connect repository to Render
-3. Set environment variable: `HF_TOKEN`
-4. Deploy
-
----
-
-## 🐛 Troubleshooting
-
-**Issue**: Buildings showing with empty addresses/values
-- **Solution**: Backend needs to fetch from Calgary APIs. Check internet connection and API availability.
-
-**Issue**: LLM query returns no results
-- **Solution**: Try simpler queries. LLM may misinterpret complex natural language.
-
-**Issue**: 3D scene not loading
-- **Solution**: Check browser console (F12) for Three.js errors. Ensure WebGL is supported.
-
-**Issue**: CORS errors
-- **Solution**: Backend is configured with CORS. Ensure `REACT_APP_API_BASE` in frontend points to correct backend URL.
 
 ---
 
